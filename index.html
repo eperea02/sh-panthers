@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Panthers U8 – Parent Guide</title>
 <meta name="theme-color" content="#5b5fa8">
-<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,7 +30,6 @@
   .dates { display:flex; flex-wrap:wrap; gap:8px; padding:0; list-style:none; margin:8px 0 16px; }
   .dates li { background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:4px 14px; margin:0; font-weight:600; }
   #install-box { display:none; }
-  #install-btn { display:none; font:inherit; font-weight:600; color:#fff; background:var(--accent); border:0; border-radius:10px; padding:10px 18px; margin:0 0 12px; cursor:pointer; }
   footer { color:var(--muted); font-size:.85rem; text-align:center; margin-top:24px; }
 </style>
 </head>
@@ -42,9 +40,8 @@
 
   <section id="install-box">
     <h2>Add to your home screen</h2>
-    <button id="install-btn" type="button">Install app</button>
     <p id="install-ios">On iPhone: tap the <strong>Share</strong> button in Safari, then <strong>Add to Home Screen</strong>.</p>
-    <p id="install-other">On Android: open your browser menu (⋮), then tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>
+    <p id="install-other">On Android: open your browser menu (⋮), then tap <strong>Add to Home screen</strong>.</p>
   </section>
 
   <section>
@@ -87,7 +84,6 @@
 <script>
 (function () {
   var box = document.getElementById('install-box');
-  var btn = document.getElementById('install-btn');
   var ios = document.getElementById('install-ios');
   var other = document.getElementById('install-other');
   var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
@@ -101,22 +97,6 @@
   box.style.display = 'block';
   ios.style.display = isIOS ? 'block' : 'none';
   other.style.display = isIOS ? 'none' : 'block';
-
-  var deferred;
-  window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault();
-    deferred = e;
-    btn.style.display = 'inline-block';
-    other.style.display = 'none';
-  });
-  btn.addEventListener('click', function () {
-    if (!deferred) return;
-    deferred.prompt();
-    deferred.userChoice.then(function () { deferred = null; box.style.display = 'none'; });
-  });
-  window.addEventListener('appinstalled', function () { box.style.display = 'none'; });
-
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 })();
 </script>
 </body>
