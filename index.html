@@ -66,7 +66,7 @@
   <section>
     <h2>Games – LeFive</h2>
     <p><strong>Location:</strong> <a href="https://maps.app.goo.gl/Aj76N6bQbFyTBraBA">LeFive (open in Maps)</a></p>
-    <p>Games are on Saturdays, the same week as each practice:</p>
+    <p>Games are on Saturdays, the same week as each practice. Game times and opponents appear here once posted (2 days before each game):</p>
     <ul class="dates" id="game-dates"></ul>
   </section>
 
@@ -120,11 +120,24 @@
   SCHEDULE.forEach(function (g) { g[1].forEach(function (d) {
     events.push({ type: g[0], date: new Date(d[0], d[1]-1, d[2]) });
   }); });
-  events.sort(function (a, b) { return a.date - b.date; });
+
+  // Overlay game details (time, opponent) from schedule.json, which a GitHub
+  // Action rebuilds from the TeamLinkt calendar feed.
+  function applyFeed(feed) {
+    ((feed && feed.games) || []).forEach(function (g) {
+      var p = g.date.split("-");
+      var d = new Date(+p[0], +p[1]-1, +p[2]);
+      var ev = events.filter(function (e) { return e.type === GAME && +e.date === +d; })[0];
+      if (!ev) { ev = { type: GAME, date: d }; events.push(ev); }
+      ev.time = g.time; ev.opponent = g.opponent; ev.homeAway = g.homeAway;
+    });
+    events.sort(function (a, b) { return a.date - b.date; });
+  }
   var now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
 
+  function render() {
   function chips(id, type) {
     var ul = document.getElementById(id);
     events.filter(function (e) { return e.type === type; }).forEach(function (e) {
@@ -140,7 +153,9 @@
     d.appendChild(el("b", "", e.date.getDate())); d.appendChild(el("span", "", MON[e.date.getMonth()]));
     var w = el("div");
     w.appendChild(el("div", "what", isToday ? "Today" : "Next " + e.type.label.toLowerCase()));
-    w.appendChild(el("div", "title", e.type.label + (e.type.time ? " · " + e.type.time : "")));
+    var time = e.time || e.type.time;
+    w.appendChild(el("div", "title", e.type.label + (time ? " · " + time : "")));
+    if (e.opponent) w.appendChild(el("div", "", "vs " + e.opponent + (e.homeAway ? " (" + e.homeAway + ")" : "")));
     var a = el("a", "", e.type.where); a.href = e.type.map; w.appendChild(a);
     r.appendChild(d); r.appendChild(w); return r;
   }
@@ -154,6 +169,12 @@
     if (n) { body.appendChild(row(n, false)); shown++; }
   });
   if (!shown) body.appendChild(el("p", "", "The season schedule is complete. See you next season!"));
+  }
+
+  fetch("schedule.json", { cache: "no-cache" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; })
+    .then(function (feed) { applyFeed(feed); render(); });
 })();
 </script>
 </body>
