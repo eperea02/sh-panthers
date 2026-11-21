@@ -28,6 +28,21 @@
   .dates li { background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:4px 14px; margin:0; font-weight:600; }
   .answers { margin:8px 0 0; padding-left:1.1rem; } .answers li { margin-bottom:4px; }
   footer { color:var(--muted); font-size:.85rem; text-align:center; margin-top:24px; }
+  .next { border-color:var(--accent); border-width:2px; }
+  .next h2 { font-size:1.2rem; }
+  .ev { display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .ev:first-of-type { border-top:0; }
+  .ev .date { flex:0 0 58px; text-align:center; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:4px 0; line-height:1.15; }
+  .ev .date b { display:block; font-size:1.3rem; }
+  .ev .date span { font-size:.75rem; text-transform:uppercase; color:var(--muted); letter-spacing:.04em; }
+  .ev .what { font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .ev .title { font-weight:700; }
+  .ev.today { background:var(--accent); color:#fff; border-radius:10px; padding:10px; margin-bottom:6px; border-top:0; }
+  .ev.today .what, .ev.today .date span { color:#e8e8ff; }
+  .ev.today a { color:#fff; }
+  .ev.today .date { color:var(--ink); }
+  .dates li.past { opacity:.45; text-decoration:line-through; }
+  .dates li.is-today { background:var(--accent); color:#fff; border-color:var(--accent); }
 </style>
 </head>
 <body>
@@ -35,23 +50,24 @@
   <h1>Panthers – Parent Guide</h1>
   <p class="sub">U8 Boys · Rec A · Coaches: Eric and Andres</p>
 
+  <section class="next" id="next" aria-live="polite">
+    <h2>What's up next</h2>
+    <div id="next-body"></div>
+  </section>
+
   <section>
     <h2>Practices – Street Soccer USA Sacramento</h2>
     <p><strong>Time:</strong> 5:00 PM PST<br>
        <strong>Location:</strong> <a href="https://maps.app.goo.gl/7PfNk6xizqYUEmxV9">Street Soccer USA, Sacramento (open in Maps)</a></p>
     <p>Practice days:</p>
-    <ul class="dates">
-      <li>Nov 19</li><li>Dec 3</li><li>Dec 10</li><li>Dec 17</li><li>Jan 7</li><li>Jan 14</li>
-    </ul>
+    <ul class="dates" id="practice-dates"></ul>
   </section>
 
   <section>
     <h2>Games – LeFive</h2>
     <p><strong>Location:</strong> <a href="https://maps.app.goo.gl/Aj76N6bQbFyTBraBA">LeFive (open in Maps)</a></p>
     <p>Games are on Saturdays, the same week as each practice:</p>
-    <ul class="dates">
-      <li>Nov 21</li><li>Dec 5</li><li>Dec 12</li><li>Dec 19</li><li>Jan 9</li><li>Jan 16</li>
-    </ul>
+    <ul class="dates" id="game-dates"></ul>
   </section>
 
   <section>
@@ -87,5 +103,58 @@
 
   <footer>Questions? Message the coaches in the TeamLinkt app.</footer>
 </main>
+<script>
+(function () {
+  var PRACTICE = { label: "Practice", time: "5:00 PM", where: "Street Soccer USA Sacramento",
+                   map: "https://maps.app.goo.gl/7PfNk6xizqYUEmxV9" };
+  var GAME = { label: "Game", time: "", where: "LeFive",
+               map: "https://maps.app.goo.gl/Aj76N6bQbFyTBraBA" };
+  // [year, month, day]
+  var SCHEDULE = [
+    [PRACTICE, [[2026,11,19],[2026,12,3],[2026,12,10],[2026,12,17],[2027,1,7],[2027,1,14]]],
+    [GAME,     [[2026,11,21],[2026,12,5],[2026,12,12],[2026,12,19],[2027,1,9],[2027,1,16]]]
+  ];
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var DAY = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var events = [];
+  SCHEDULE.forEach(function (g) { g[1].forEach(function (d) {
+    events.push({ type: g[0], date: new Date(d[0], d[1]-1, d[2]) });
+  }); });
+  events.sort(function (a, b) { return a.date - b.date; });
+  var now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+
+  function chips(id, type) {
+    var ul = document.getElementById(id);
+    events.filter(function (e) { return e.type === type; }).forEach(function (e) {
+      var cls = e.date < today ? "past" : (+e.date === +today ? "is-today" : "");
+      ul.appendChild(el("li", cls, MON[e.date.getMonth()] + " " + e.date.getDate()));
+    });
+  }
+  chips("practice-dates", PRACTICE); chips("game-dates", GAME);
+
+  function row(e, isToday) {
+    var r = el("div", "ev" + (isToday ? " today" : ""));
+    var d = el("div", "date"); d.appendChild(el("span", "", DAY[e.date.getDay()]));
+    d.appendChild(el("b", "", e.date.getDate())); d.appendChild(el("span", "", MON[e.date.getMonth()]));
+    var w = el("div");
+    w.appendChild(el("div", "what", isToday ? "Today" : "Next " + e.type.label.toLowerCase()));
+    w.appendChild(el("div", "title", e.type.label + (e.type.time ? " · " + e.type.time : "")));
+    var a = el("a", "", e.type.where); a.href = e.type.map; w.appendChild(a);
+    r.appendChild(d); r.appendChild(w); return r;
+  }
+
+  var body = document.getElementById("next-body");
+  var upcoming = events.filter(function (e) { return e.date >= today; });
+  var shown = 0;
+  upcoming.filter(function (e) { return +e.date === +today; }).forEach(function (e) { body.appendChild(row(e, true)); shown++; });
+  [PRACTICE, GAME].forEach(function (t) {
+    var n = upcoming.filter(function (e) { return e.type === t && e.date > today; })[0];
+    if (n) { body.appendChild(row(n, false)); shown++; }
+  });
+  if (!shown) body.appendChild(el("p", "", "The season schedule is complete. See you next season!"));
+})();
+</script>
 </body>
 </html>
